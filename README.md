@@ -1,7 +1,6 @@
 # hw
 
-# Setup
-NOTE: Below you can find instruction for Ubuntu 
+# Setup [Ubuntu instruction] 
 1. Install python3.6
 ```shell
 $ sudo add-apt-repository ppa:deadsnakes/ppa
