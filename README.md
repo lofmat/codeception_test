@@ -19,5 +19,5 @@ $ pip3 install -r requirements.txt
 ```
 # Run script
 ```shell
-$ ./scratch_img.py --url "http://www.site.com" --base_dir "./site_images"
+$ ./img_scraper.py --url "http://www.site.com" --base_dir "./site_images"
 ```
