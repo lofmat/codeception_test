@@ -52,31 +52,32 @@ if __name__ == '__main__':
     soup = BeautifulSoup(data, "lxml")
     # Create directory where will be saved images
     dir_name = create_dir(namespace.base_dir)
-    # Loop over all img tags on the web page
     link_count = 0
+    # Loop over all img tags on the web page
     for link in soup.find_all('img'):
         # Images link may be stored as values of src or some custom attribute.
         # In case with custom attribute we don't know a name of this attribute
         curr_link_attrs = link.attrs
         for attr in curr_link_attrs:
-            if (str(curr_link_attrs[attr]).endswith('jpg') or
-                    str(curr_link_attrs[attr]).endswith('png') or
-                    str(curr_link_attrs[attr]).endswith('gif') or
-                    str(curr_link_attrs[attr]).endswith('tif')):
-                image_link = curr_link_attrs[attr]
-                # Link may contains question mark
-                # e.g src="https://www.somesite/blabla.png?strip=all&amp;w=210"
-                # in other case will be returned "-1"
-                q_index = image_link.find("?")
-                if q_index != -1:
-                    image_link = image_link[:q_index]
+            attr_value = str(curr_link_attrs[attr])
+            # Link may contains question mark
+            # e.g src="https://www.somesite/blabla.png?strip=all&amp;w=210"
+            # in other case will be returned "-1"
+            q_index = attr_value.find("?")
+            if q_index != -1:
+                attr_value = attr_value[:q_index]
+            if (attr_value.endswith('jpg') or
+                    attr_value.endswith('png') or
+                    attr_value.endswith('gif') or
+                    attr_value.endswith('tif')):
+                image_link = attr_value
                 # Case when src contains relative path
                 if not image_link.startswith('http:/') and not image_link.startswith('https:/'):
                     image_link = f'{target_url}/{image_link}'
                 response_img = get_url(image_link)
                 image_name = os.path.basename(image_link)
                 image_path = os.path.join(dir_name, image_name)
-                print(f'Current image is {image_path}')
+                print(f'Current image is {image_link}')
                 with open(image_path, "wb") as f:
                     f.write(response_img.content)
                 link_count += 1
