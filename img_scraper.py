@@ -10,8 +10,8 @@ import datetime
 # Command line parser
 def create_parser():
     p = argparse.ArgumentParser()
-    parser.add_argument('--url', required=True)
-    parser.add_argument('--base_dir', required=True)
+    p.add_argument('--url', required=True)
+    p.add_argument('--base_dir', required=True)
     return p
 
 
