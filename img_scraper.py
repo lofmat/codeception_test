@@ -63,9 +63,11 @@ if __name__ == '__main__':
             # Link may contains question mark
             # e.g src="https://www.somesite/blabla.png?strip=all&amp;w=210"
             # in other case will be returned "-1"
-            q_index = attr_value.find("?")
-            if q_index != -1:
-                attr_value = attr_value[:q_index]
+            # Look at tags that can contains img links only
+            if attr != "alt" or attr != "title":
+                q_index = attr_value.find("?")
+                if q_index != -1:
+                    attr_value = attr_value[:q_index]
             if (attr_value.endswith('jpg') or
                     attr_value.endswith('png') or
                     attr_value.endswith('gif') or
