@@ -8,6 +8,7 @@ import datetime
 from pathlib import PurePath, Path
 import glob
 
+
 # Command line parser
 def create_parser():
     p = argparse.ArgumentParser()
@@ -111,15 +112,20 @@ def get_all_links_from_img_tag(attrs, base_addr):
     return links_list
 
 
+# Сollect statistics on downloaded files
 def files_count(somedir):
-    extensions = ['jpg', 'png', 'gif', 'tif', 'svg']
+    extensions = ['jpg', 'jpeg', 'png', 'gif', 'tif', 'svg']
     print(f'Were downloaded: ')
-    total = 0
+    def_ext_files_count = 0
     for e in extensions:
         f_count = len(glob.glob1(somedir, f'*.{e}'))
         if f_count > 0:
             print(f'... *.{e}: {f_count}')
-            total += f_count
+            def_ext_files_count += f_count
+    total = len(glob.glob1(somedir, '*'))
+    if def_ext_files_count < total:
+        unident_ext_files_count = total - def_ext_files_count
+        print(f'Unidentified extension: {unident_ext_files_count}')
     print(f'Total: {total}')
 
 
