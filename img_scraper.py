@@ -5,33 +5,48 @@ import os
 import sys
 import argparse
 import datetime
-
+from pathlib import PurePath, Path
+import glob
 
 # Command line parser
 def create_parser():
     p = argparse.ArgumentParser()
-    p.add_argument('--url', required=True)
-    p.add_argument('--base_dir', required=True)
+    p.add_argument('--url', required=True, help="Site url e.g http://www.spiegel.de")
+    p.add_argument('--base_dir', required=True, help="Directory where will be saved images")
     return p
 
 
 # Creating directory to save images
 def create_dir(dir_path):
-    act_dir_path = dir_path
-    if os.path.exists(dir_path):
+    """
+    Create directory where will be stored image
+    :param dir_path: desired directory name
+    :return: path to directory that was created
+    """
+    actual_dir_path = dir_path
+    # Create sub directory in case if directory already exist
+    if Path(dir_path).exists():
         timestamp = datetime.datetime.now().strftime("%y%m%d-%H%m%S")
-        act_dir_path = os.path.join(dir_path, timestamp)
+        actual_dir_path = PurePath(dir_path).joinpath(timestamp)
     try:
-        os.mkdir(act_dir_path)
+        os.mkdir(actual_dir_path)
+    # Catch situation when the directory can't be created
+    # e.g. C:\some\path in Linux
     except FileNotFoundError as exc:
         print(f'Error:\n{exc}')
         sys.exit(1)
-    return act_dir_path
+    print(f'Images will be saved in: {Path(actual_dir_path).resolve()}')
+    return actual_dir_path
 
 
-def get_url(url):
+def get_url(site_url):
+    """
+    Get link of image
+    :param site_url: site address e.g. http://www.spiegel.de
+    :return: response object
+    """
     try:
-        r = requests.get(url)
+        r = requests.get(site_url)
     except (requests.exceptions.ConnectionError,
             requests.exceptions.HTTPError,
             requests.exceptions.Timeout,
@@ -39,6 +54,73 @@ def get_url(url):
         print(f'Error:{e}')
         sys.exit(1)
     return r
+
+
+def download_img(i_link):
+    """
+    Download the image that is stored by the link
+    :param i_link: url of the image e.g. https://some_image.jpg
+    """
+    response_img = get_url(i_link)
+    image_name = PurePath(i_link).name
+    image_path = PurePath(dir_name).joinpath(image_name)
+    print(f' > Current image is {i_link}')
+    # Download only unique images
+    if not Path(image_path).exists():
+        with open(image_path, "wb") as f:
+            f.write(response_img.content)
+        if not Path(image_path).exists():
+            print(f'Error: The following image wasn\'t downloaded {image_path}')
+    else:
+        print(f' > > > Image {i_link} has been already downloaded. Skipped.')
+
+
+# Images link may be stored as values of src or some custom attribute.
+# In case with custom attribute we don't know a name of this attribute.
+# That why we must explore all attributes that img tag may contains
+def get_all_links_from_img_tag(attrs, base_addr):
+    """
+    :param attrs: dictionary that contains all attributes of the img tag
+    :param base_addr: site address e.g. http://www.spiegel.de
+    :return: list of urls that were extracted from tag attributes
+    """
+    links_list = []
+    for attr_name, attr_value in attrs.items():
+        if isinstance(attr_value, str):
+            attr_value = attr_value.strip()
+            # Relative links
+            if str(attr_value).startswith('//'):
+                links_list.append(f'http:{attr_value}')
+            elif str(attr_value).startswith('/'):
+                links_list.append(f'{base_addr}/{attr_value}')
+            # http/https links
+            elif str(attr_value).startswith('http'):
+                links_list.append(attr_value)
+            # Cases like this
+            # <img src="image-src.png" srcset="image-1x.png 1x, image-2x.png 2x">
+            elif attr_name == "srcset":
+                tlist = str(attr_value).split(",")
+                for i in tlist:
+                    links_list.append(str(i).split(" ")[0])
+    for l in links_list:
+        # Case like www.site.com?resize=....
+        if '?' in l:
+            q_index = l.find("?")
+            new_link = l[:q_index]
+            links_list[links_list.index(l)] = new_link
+    return links_list
+
+
+def files_count(somedir):
+    extensions = ['jpg', 'png', 'gif', 'tif', 'svg']
+    print(f'Were downloaded: ')
+    total = 0
+    for e in extensions:
+        f_count = len(glob.glob1(somedir, f'*.{e}'))
+        if f_count > 0:
+            print(f'... *.{e}: {f_count}')
+            total += f_count
+    print(f'Total: {total}')
 
 
 if __name__ == '__main__':
@@ -52,35 +134,11 @@ if __name__ == '__main__':
     soup = BeautifulSoup(data, "lxml")
     # Create directory where will be saved images
     dir_name = create_dir(namespace.base_dir)
-    link_count = 0
     # Loop over all img tags on the web page
     for link in soup.find_all('img'):
-        # Images link may be stored as values of src or some custom attribute.
-        # In case with custom attribute we don't know a name of this attribute
         curr_link_attrs = link.attrs
-        for attr in curr_link_attrs:
-            attr_value = str(curr_link_attrs[attr])
-            # Link may contains question mark
-            # e.g src="https://www.somesite/blabla.png?strip=all&amp;w=210"
-            # in other case will be returned "-1"
-            # Look at tags that can contains img links only
-            if attr != "alt" or attr != "title":
-                q_index = attr_value.find("?")
-                if q_index != -1:
-                    attr_value = attr_value[:q_index]
-            if (attr_value.endswith('jpg') or
-                    attr_value.endswith('png') or
-                    attr_value.endswith('gif') or
-                    attr_value.endswith('tif')):
-                image_link = attr_value
-                # Case when src contains relative path
-                if not image_link.startswith('http:/') and not image_link.startswith('https:/'):
-                    image_link = f'{target_url}/{image_link}'
-                response_img = get_url(image_link)
-                image_name = os.path.basename(image_link)
-                image_path = os.path.join(dir_name, image_name)
-                print(f'Current image is {image_link}')
-                with open(image_path, "wb") as f:
-                    f.write(response_img.content)
-                link_count += 1
-    print(f'Were downloaded {link_count} images')
+        img_urls = get_all_links_from_img_tag(curr_link_attrs, target_url)
+        for url in img_urls:
+            download_img(url)
+    files_count(dir_name)
+
