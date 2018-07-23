@@ -35,7 +35,7 @@ def create_dir(dir_path):
     except FileNotFoundError as exc:
         print(f'Error:\n{exc}')
         sys.exit(1)
-    print(f'Images will be saved in: {Path(actual_dir_path).resolve()}')
+    print(f'Images will be saved to: {Path(actual_dir_path).resolve()}')
     return actual_dir_path
 
 
